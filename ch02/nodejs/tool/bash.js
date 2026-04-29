@@ -46,16 +46,23 @@ export class BashTool {
     const { command } = JSON.parse(argumentsInJSON);
 
     const isWindows = os.platform() === 'win32';
-    const shellCmd = isWindows
-      ? ['cmd', ['/C', command]]
-      : ['sh', ['-c', command]];
 
     // execSync 会合并 stdout + stderr，超时 30 秒
-    const output = execSync(`${shellCmd[0]} ${shellCmd[1].join(' ')}`, {
-      encoding: 'utf-8',
-      timeout: 30_000,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    // Windows 使用 cmd /C，Unix 使用 sh -c
+    let output;
+    if (isWindows) {
+      output = execSync(command, {
+        shell: 'cmd.exe',
+        encoding: 'utf-8',
+        timeout: 30_000,
+      });
+    } else {
+      output = execSync(command, {
+        shell: '/bin/sh',
+        encoding: 'utf-8',
+        timeout: 30_000,
+      });
+    }
 
     return output;
   }
