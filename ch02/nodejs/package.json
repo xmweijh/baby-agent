@@ -1,0 +1,13 @@
+{
+  "name": "babyagent-ch02",
+  "version": "1.0.0",
+  "description": "BabyAgent Chapter 02 - Tool Calling & Agent Loop (Node.js)",
+  "type": "module",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "openai": "^4.98.0",
+    "dotenv": "^16.4.5"
+  }
+}
