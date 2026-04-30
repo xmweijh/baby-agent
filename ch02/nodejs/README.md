@@ -51,10 +51,10 @@ node main.js -q "请读取 README.md 并总结项目目标"
 node main.js -q "在 ch02 目录下创建一个 TODO.md，内容为：1. 研究 Agent"
 
 # 让 Agent 执行命令
-node main.js -q "列出当前目录下的所有 .go 文件"
+node main.js -q "列出当前目录下的所有 .js 文件"
 
 # 组合任务（Agent 会自动拆解步骤）
-node main.js -q "读取 ch02/prompt.go，然后把其中的英文注释翻译成中文写回去"
+node main.js -q "读取 ch02/nodejs/agent.js，然后把其中的英文注释翻译成中文写回去"
 ```
 
 > 日志打印到 `stderr`，最终回答打印到 `stdout`，可以用 `2>/dev/null` 过滤日志。
@@ -252,14 +252,14 @@ return fs.readFileSync(resolved, 'utf-8');
 #### write — 文件写入
 
 ```js
-// 自动创建父目录（Node.js 独有改进，Go 版本没有此逻辑）
+// 自动创建父目录（若目录不存在则自动创建）
 const dir = path.dirname(resolved);
 fs.mkdirSync(dir, { recursive: true });
 fs.writeFileSync(resolved, content, 'utf-8');
 ```
 
 - `O_TRUNC` 语义：每次都完整覆盖，不追加
-- `mkdirSync({ recursive: true })`：自动创建不存在的父目录，比 Go 版本更友好
+- `mkdirSync({ recursive: true })`：自动创建不存在的父目录，写文件时无需手动 mkdir
 
 #### edit — 精准替换编辑
 
@@ -291,7 +291,7 @@ execSync(command, { encoding: 'utf-8', timeout: 30_000 });
 
 ### 6. 工具接口的统一设计
 
-所有工具实现相同的三个方法（对应 Go 的 `Tool` interface）：
+所有工具实现相同的三个方法：
 
 ```js
 class SomeTool {
@@ -316,7 +316,7 @@ class SomeTool {
 async #execute(toolName, argumentsInJSON) { ... }
 ```
 
-`#` 前缀表示真正的私有方法——外部代码无法访问 `agent.#execute()`，这与 Go 的小写 `execute` 方法的包级私有略有区别（JS 私有性更强）。
+`#` 前缀表示真正的私有方法——外部代码无法访问 `agent.#execute()`，是 ES2022 引入的语言级私有（不同于早期用 `_` 前缀的约定俗成私有）。
 
 ---
 
