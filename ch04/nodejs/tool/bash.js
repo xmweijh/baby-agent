@@ -1,0 +1,32 @@
+import { execSync } from 'child_process';
+import os from 'os';
+
+export class BashTool {
+  name() { return 'bash'; }
+
+  info() {
+    return {
+      type: 'function',
+      function: {
+        name: this.name(),
+        description: 'Execute a shell command and return its combined stdout and stderr output.',
+        parameters: {
+          type: 'object',
+          properties: {
+            command: { type: 'string', description: 'The shell command to execute.' },
+          },
+          required: ['command'],
+        },
+      },
+    };
+  }
+
+  async execute(argumentsInJSON) {
+    const { command } = JSON.parse(argumentsInJSON);
+    return execSync(command, {
+      shell: os.platform() === 'win32' ? 'cmd.exe' : '/bin/sh',
+      encoding: 'utf-8',
+      timeout: 30_000,
+    });
+  }
+}

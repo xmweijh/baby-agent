@@ -1,0 +1,14 @@
+{
+  "name": "babyagent-ch04-nodejs",
+  "version": "1.0.0",
+  "description": "BabyAgent Chapter 04 - MCP Integration (Node.js)",
+  "type": "module",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "dotenv": "^16.4.5",
+    "openai": "^4.98.0"
+  }
+}
