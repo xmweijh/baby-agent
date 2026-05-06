@@ -1,0 +1,16 @@
+{
+  "name": "baby-agent-ch07",
+  "version": "1.0.0",
+  "description": "Chapter 7: Agentic RAG — Node.js implementation",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js",
+    "index": "node index_cli.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "gpt-tokenizer": "^2.1.2",
+    "openai": "^4.47.1"
+  }
+}
