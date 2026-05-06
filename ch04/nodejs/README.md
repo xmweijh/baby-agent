@@ -161,7 +161,64 @@ await this.client.connect(transport);
 - 所有 MCP Server 都天然支持 stdio 传输
 - 启动速度快，延迟极低
 
-### 3. 工具命名空间化（Namespace）
+### 3. HTTP 传输配置示例
+
+如果 MCP Server 是远程服务（或本地已经开了 HTTP 服务），可以用 HTTP 传输：
+
+```json
+{
+  "my-remote-server": {
+    "url": "http://localhost:8080/mcp",
+    "headers": {
+      "Authorization": "Bearer my-token"
+    }
+  }
+}
+```
+
+对应代码里用 `StreamableHTTPClientTransport` 连接：
+
+```js
+transport = new StreamableHTTPClientTransport(
+  new URL(this.serverConfig.url),
+  { headers: this.serverConfig.headers ?? {} },
+);
+```
+
+HTTP 传输适合的场景：
+- MCP Server 是一个已运行的独立进程（如 Docker 容器里的服务）
+- 需要多个 Agent 进程共用同一个 MCP Server 实例
+- MCP Server 部署在远程机器上
+
+stdio 适合的场景：
+- 工具服务是可执行程序，每次需要按需启动（如 `npx @modelcontextprotocol/server-filesystem`）
+- 单 Agent 独占一个工具进程
+- 本地开发调试
+
+### 4. 为什么 MCP 选用 JSON-RPC 2.0 而不是 REST
+
+你可能会想：直接用 REST（GET/POST）不是更简单吗？JSON-RPC 2.0 的选择有几个原因：
+
+**双向调用能力**：JSON-RPC 支持服务端主动向客户端发消息（通知），未来 MCP 可以扩展为 Server 主动推送事件给 Agent（如工具执行进度、异步结果）。REST 是请求-响应模型，服务端不能主动发起。
+
+**批量请求**：JSON-RPC 2.0 支持在一次 HTTP 请求里携带多个 RPC 调用（批处理），可以一次性发送多个 `tools/call`，减少往返延迟。
+
+**统一消息格式**：所有消息（请求、响应、通知、错误）共用一套结构：
+
+```json
+// 请求
+{ "jsonrpc": "2.0", "method": "tools/call", "params": {...}, "id": 1 }
+
+// 响应
+{ "jsonrpc": "2.0", "result": {...}, "id": 1 }
+
+// 错误
+{ "jsonrpc": "2.0", "error": { "code": -32600, "message": "..." }, "id": 1 }
+```
+
+这套格式同时适用于 stdio（换行分隔的 JSON 流）和 HTTP，传输层和协议层彻底解耦。
+
+### 5. 工具命名空间化（Namespace）
 
 当 Agent 同时挂载多个 MCP Server 时，不同 Server 可能有同名工具（例如多个 Server 都有 `read_file`）。为了避免冲突，所有 MCP 工具在注册进 Agent 时都会加上 server 名称作为前缀：
 
@@ -192,7 +249,7 @@ async execute(argumentsInJSON) {
 }
 ```
 
-### 4. 工具路由的统一化
+### 6. 工具路由的统一化
 
 本章的一个重要设计决策：**不区分工具来源**。
 
@@ -224,7 +281,7 @@ const result = await this.#execute(toolCall.function.name, toolCall.function.arg
 
 Agent Loop 主体代码完全不需要感知"工具是哪里来的"。
 
-### 5. `#buildTools()` 的合并逻辑
+### 7. `#buildTools()` 的合并逻辑
 
 Agent 每次发请求时，会把所有工具的 `info()` 合并成一个 tools 数组传给 LLM：
 
@@ -259,7 +316,7 @@ info() {
 
 注意：MCP Server 在 `tools/list` 响应里已经提供了 `inputSchema`（JSON Schema 格式），因此不需要 Agent 手写工具参数结构，直接透传即可。这是 MCP 协议减少接入成本的一个核心设计。
 
-### 6. `${workspaceFolder}` 占位符替换
+### 8. `${workspaceFolder}` 占位符替换
 
 很多 MCP Server（如 `server-filesystem`）需要知道当前工作目录。为了让 `mcp-server.json` 可移植，本章使用 `${workspaceFolder}` 作为占位符：
 
@@ -285,7 +342,7 @@ function replacePlaceholders(serverConfig, workspaceFolder) {
 
 这样 `mcp-server.json` 可以提交到代码库，不同机器上 clone 下来不需要手动修改路径。
 
-### 7. MCP 工具的返回格式
+### 9. MCP 工具的返回格式
 
 MCP `tools/call` 的响应结构是：
 
@@ -309,7 +366,7 @@ return result.content
 
 图片等非文本内容暂不处理（在多模态 Agent 章节会扩展）。
 
-### 8. MCP 加载失败的容错处理
+### 10. MCP 加载失败的容错处理
 
 如果某个 MCP Server 启动失败（比如 `npx` 超时、命令不存在），Agent 不应该整体退出，而是跳过这个 Server 继续加载其他的：
 
@@ -327,7 +384,7 @@ try {
 - 即使 MCP 配置有误，native 工具仍然可用
 - 多个 MCP Server 中某个失败，不影响其他 Server
 
-### 9. Agent 与 MCP Client 的生命周期
+### 11. Agent 与 MCP Client 的生命周期
 
 本章中 MCP Client 在 `main.js` 里启动，生命周期与整个进程绑定：
 

@@ -143,7 +143,35 @@ for await (const chunk of stream) {
 
 ---
 
-### 2. 为什么流式响应里要自己拼增量
+### 2. 底层传输：SSE（Server-Sent Events）
+
+流式 API 的底层传输协议是 **SSE（Server-Sent Events）**。它是一个基于普通 HTTP 的单向推送协议：
+
+```
+客户端发一次 HTTP POST 请求 → 服务端保持连接不关闭 → 服务端持续 write 数据
+```
+
+每个数据块的格式是固定的：
+
+```
+data: {"choices":[{"delta":{"content":"法"},...}]}\n\n
+data: {"choices":[{"delta":{"content":"国"},...}]}\n\n
+data: [DONE]\n\n
+```
+
+- 每条消息以 `data: ` 开头，`\n\n` 结尾
+- `[DONE]` 是流结束的信号
+- 这是普通 HTTP 连接，不需要 WebSocket，不需要握手升级
+
+OpenAI SDK 在内部帮你处理了 SSE 解析，把每个 `data: {...}` 解码成结构化的 chunk 对象，通过 `AsyncIterable` 暴露给你。所以你在 `for await...of stream` 里消费到的每个 `chunk`，对应的就是服务端 `write` 的一行 SSE 数据。
+
+**为什么不用 WebSocket？**
+
+SSE 是单向的（服务端 → 客户端），但文本生成本来就是单向推送：用户发一次请求，服务端持续把生成的 token 推过来。SSE 足够满足需求，且基于 HTTP，可以直接走 CDN、负载均衡，兼容性更好。WebSocket 适合双向实时通信（如聊天室），对于 LLM 推理流式输出场景是过度设计。
+
+---
+
+### 3. 为什么流式响应里要自己拼增量
 
 在流式模式下，每个 chunk 只是一小段增量，而不是完整答案。例如：
 
@@ -162,13 +190,13 @@ for await (const chunk of stream) {
 本章在 `agent.js` 里同时做了两件事：
 
 1. 在 `for await...of stream` 中实时把 `delta.content` / `delta.reasoning_*` 发给 TUI
-2. 在流结束后调用 `stream.finalChatCompletion()` 取到聚合后的完整 `assistant message`
+2. 在同一个循环里手动累积 `accContent` 和 `accToolCalls`，流结束后自行组装完整的 `assistant message`
 
 这样既保留了**实时展示**，又能继续完成后续的 **tool loop**。
 
 ---
 
-### 3. reasoning 字段为什么要兼容多个名字
+### 4. reasoning 字段为什么要兼容多个名字
 
 不同模型/服务商对“推理过程”的字段命名不统一。常见情况有：
 
@@ -203,7 +231,7 @@ function reasoningText(delta) {
 
 ---
 
-### 4. 事件驱动的可视化层
+### 5. 事件驱动的可视化层
 
 本章没有让 `agent.js` 直接 `console.log()`，而是让它把流式过程抽象成事件：
 
@@ -238,7 +266,7 @@ Agent 在运行时，通过 `onEvent(event)` 把消息抛给 UI：
 
 ---
 
-### 5. Agent Loop 在第三章里有什么变化
+### 6. Agent Loop 在第三章里有什么变化
 
 第三章并没有推翻第二章的 Tool Loop，而是在第二章基础上加入流式层。
 
@@ -269,7 +297,7 @@ for await...of 消费 chunk
 
 ---
 
-### 6. 为什么流式模式下还要自己拼出"最终完整消息"
+### 7. 为什么流式模式下还要自己拼出"最终完整消息"
 
 这是很多初学者会忽略的点。
 
@@ -315,7 +343,7 @@ if (accToolCalls.length > 0) message.tool_calls = accToolCalls;
 
 ---
 
-### 7. AbortController：为什么 Ctrl+C 能取消当前轮
+### 8. AbortController：为什么 Ctrl+C 能取消当前轮
 
 在 Node.js 版本中，取消流式输出靠的是 `AbortController`：
 
@@ -348,7 +376,7 @@ this.abortController.abort();
 
 ---
 
-### 8. 为什么 TUI 要把推理和回答分开显示
+### 9. 为什么 TUI 要把推理和回答分开显示
 
 如果你把 reasoning 和 content 都直接打印到同一个区域，会出现两个问题：
 
@@ -366,7 +394,7 @@ this.abortController.abort();
 
 ---
 
-### 9. 为什么这里不用复杂 TUI 框架
+### 10. 为什么这里不用复杂 TUI 框架
 
 Node.js 里如果想做更复杂的终端 UI，也可以选：
 
@@ -391,7 +419,7 @@ Node.js 里如果想做更复杂的终端 UI，也可以选：
 
 ---
 
-### 10. 本章只保留 bash 工具的原因
+### 11. 本章只保留 bash 工具的原因
 
 第三章的重点是 **流式 + reasoning + TUI**，不是工具生态扩展。所以本章只保留一个 `bash` 工具，避免把注意力分散到 read/write/edit 上。
 

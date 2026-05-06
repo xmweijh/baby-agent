@@ -1,0 +1,15 @@
+{
+  "name": "babyagent-ch05-nodejs",
+  "version": "1.0.0",
+  "description": "BabyAgent Chapter 05 - Context Engineering (Node.js)",
+  "type": "module",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "dotenv": "^16.4.5",
+    "gpt-tokenizer": "^2.9.0",
+    "openai": "^4.98.0"
+  }
+}
