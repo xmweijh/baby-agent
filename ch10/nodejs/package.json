@@ -1,0 +1,17 @@
+{
+  "name": "baby-agent-ch10",
+  "version": "1.0.0",
+  "description": "Chapter 10: Web Service & SSE Streaming — Node.js implementation",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.6.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "openai": "^4.47.1",
+    "uuid": "^10.0.0"
+  }
+}
